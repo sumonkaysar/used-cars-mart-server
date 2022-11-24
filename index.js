@@ -15,6 +15,21 @@ app.use(express.json())
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.zuoxzfe.mongodb.net/?retryWrites=true&w=majority`
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 })
 
+async function run() {
+  try {
+    const categoriesCollection = client.db('usedCarsMart').collection('categories')
+    const carsCollection = client.db('usedCarsMart').collection('cars')
+
+    app.get('/categories', async (req, res) => {
+      const query = {}
+      const categories = await categoriesCollection.find(query).toArray()
+
+      res.send(categories)
+    })
+  } finally { }
+}
+
+run().catch(err => console.error(err))
 
 app.get("/", (req, res) => {
   res.send("Used Cars Mart server is running")
