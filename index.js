@@ -1,7 +1,7 @@
 const express = require("express")
 const cors = require("cors")
 const jwt = require("jsonwebtoken")
-const { MongoClient, ServerApiVersion } = require('mongodb')
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb')
 require("dotenv").config()
 
 const port = process.env.PORT || 5000
@@ -19,6 +19,8 @@ async function run() {
   try {
     const categoriesCollection = client.db('usedCarsMart').collection('categories')
     const carsCollection = client.db('usedCarsMart').collection('cars')
+    const usersCollection = client.db('usedCarsMart').collection('users')
+    const bookedCarsCollection = client.db('usedCarsMart').collection('bookedCars')
 
     app.get('/categories', async (req, res) => {
       const query = {}
@@ -28,11 +30,48 @@ async function run() {
     })
 
     app.get('/categories/:id', async (req, res) => {
-      const {id} = req.params
-      const query = {categoryId: id}
-      const categories = await carsCollection.find(query).toArray()
+      const { id } = req.params
+      const { email } = req.query
 
-      res.send(categories)
+      const carsQuery = { categoryId: id }
+      const cars = await carsCollection.find(carsQuery).toArray()
+
+      const bookingQuery = { buyerEmail: email }
+      const booked = await bookedCarsCollection.find(bookingQuery).toArray()
+
+      const bookedIds = booked.map(book => book.carId)
+      const remainingCars = cars.filter(car => !bookedIds.includes(car._id.toString()))
+
+      res.send(remainingCars)
+    })
+
+    app.get('/users/role', async (req, res) => {
+      const query = { email: req.query.email }
+      const user = await usersCollection.findOne(query)
+
+      res.send({role: user?.role})
+    })
+
+    app.post('/users', async (req, res) => {
+      const user = req.body
+      const result = await usersCollection.insertOne(user)
+
+      res.send(result)
+    })
+
+    app.post('/bookCar', async (req, res) => {
+      const booking = req.body
+      const query = { carId: booking.carId, buyerEmail: booking.buyerEmail }
+      const bookedCar = await bookedCarsCollection.findOne(query)
+      if (bookedCar) {
+        return res.send({
+          acknowledged: false,
+          message: "You have already booked this car"
+        })
+      }
+      const result = await bookedCarsCollection.insertOne(booking)
+
+      res.send(result)
     })
   } finally { }
 }
