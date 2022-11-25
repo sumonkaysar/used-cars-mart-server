@@ -52,6 +52,13 @@ async function run() {
       res.send({role: user?.role})
     })
 
+    app.get('/users/verified', async (req, res) => {
+      const query = { email: req.query.email }
+      const user = await usersCollection.findOne(query)
+
+      res.send({verified: user?.verified || false})
+    })
+
     app.post('/users', async (req, res) => {
       const user = req.body
       const result = await usersCollection.insertOne(user)
