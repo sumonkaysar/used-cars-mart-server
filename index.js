@@ -45,6 +45,20 @@ async function run() {
       res.send(remainingCars)
     })
 
+    app.get('/cars', async (req, res) => {
+      const query = {sellerEmail: req.query.email}
+      const cars = await carsCollection.find(query).toArray()
+
+      res.send(cars)
+    })
+
+    app.post('/cars', async (req, res) => {
+      const car = req.body
+      const result = await carsCollection.insertOne(car)
+
+      res.send(result)
+    })
+
     app.get('/users/role', async (req, res) => {
       const query = { email: req.query.email }
       const user = await usersCollection.findOne(query)
