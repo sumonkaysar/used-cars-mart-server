@@ -46,7 +46,12 @@ async function run() {
     })
 
     app.get('/cars', async (req, res) => {
-      const query = {sellerEmail: req.query.email}
+      let query = {}
+      if (req.query.email) {
+        query = {sellerEmail: req.query.email}
+      }else if (req.query.published) {
+        query = {published: true}
+      }
       const cars = await carsCollection.find(query).toArray()
 
       res.send(cars)
