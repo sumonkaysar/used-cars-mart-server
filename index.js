@@ -46,15 +46,23 @@ async function run() {
     })
 
     app.get('/cars', async (req, res) => {
-      let query = {}
       if (req.query.email) {
-        query = {sellerEmail: req.query.email}
-      }else if (req.query.published) {
-        query = {published: true}
-      }
+        const query = {sellerEmail: req.query.email}
       const cars = await carsCollection.find(query).toArray()
 
       res.send(cars)
+      }else if (req.query.published) {
+        const query = { published:  true}
+        const publishedCars = await carsCollection.find(query).toArray()
+  
+        const bookingQuery = { }
+        const booked = await bookedCarsCollection.find(bookingQuery).toArray()
+  
+        const bookedIds = booked.map(book => book.carId)
+        const remainingCars = publishedCars.filter(car => !bookedIds.includes(car._id.toString()))
+  
+        res.send(remainingCars)
+      }
     })
 
     app.post('/cars', async (req, res) => {
