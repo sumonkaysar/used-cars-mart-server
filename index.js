@@ -59,6 +59,14 @@ async function run() {
       res.send(result)
     })
 
+    app.delete('/cars/:id', async (req, res) => {
+      const {id} = req.params
+      const query = { _id: ObjectId(id) }
+      const result = await carsCollection.deleteOne(query)
+
+      res.send(result)
+    })
+
     app.get('/users/role', async (req, res) => {
       const query = { email: req.query.email }
       const user = await usersCollection.findOne(query)
