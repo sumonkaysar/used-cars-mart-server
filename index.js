@@ -59,6 +59,18 @@ async function run() {
       res.send(result)
     })
 
+    app.patch('/cars/:id', async (req, res) => {
+      const {id} = req.params
+      const {published} = req.body
+      const query = { _id: ObjectId(id) }
+      const updatedDoc = {
+        $set: { published }
+      }
+      const result = await carsCollection.updateOne(query, updatedDoc)
+
+      res.send(result)
+    })
+
     app.delete('/cars/:id', async (req, res) => {
       const {id} = req.params
       const query = { _id: ObjectId(id) }
