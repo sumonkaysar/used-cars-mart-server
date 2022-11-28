@@ -45,6 +45,18 @@ async function run() {
       res.send(remainingCars)
     })
 
+    app.get('/jwt', async (req, res) => {
+      const {email} = req.query
+      const query = {email}
+      const user = await usersCollection.findOne(query)
+      if (user) {
+        const token = jwt.sign({email}, process.env.SECRET_TOKEN, {expiresIn: '1h'})
+        return res.send({accessToken: token})
+      }
+
+      res.status(403).send({message: 'Forbidden Authorization'})
+    })
+
     app.get('/cars', async (req, res) => {
       if (req.query.email) {
         const query = {sellerEmail: req.query.email}
@@ -52,7 +64,7 @@ async function run() {
 
       res.send(cars)
       }else if (req.query.published) {
-        const query = { published:  true}
+        const query = { published:  true, status: 'Available'}
         const publishedCars = await carsCollection.find(query).toArray()
   
         const bookingQuery = { }
@@ -106,9 +118,38 @@ async function run() {
       res.send({verified: user?.verified || false})
     })
 
+    app.get('/users', async (req, res) => {
+      const query = { role: req.query.role }
+      const users = await usersCollection.find(query).toArray()
+
+      res.send(users)
+    })
+
     app.post('/users', async (req, res) => {
       const user = req.body
       const result = await usersCollection.insertOne(user)
+
+      res.send(result)
+    })
+
+    app.patch('/users/:id', async (req, res) => {
+      const {id} = req.params
+      const {verified} = req.body
+      
+      const query = { _id: ObjectId(id) }
+      const updatedDoc = {
+        $set: {verified}
+      }
+      const result = await usersCollection.updateOne(query, updatedDoc)
+
+      res.send(result)
+    })
+
+    app.delete('/users/:id', async (req, res) => {
+      const {id} = req.params
+
+      const query = { _id: ObjectId(id) }
+      const result = await usersCollection.deleteOne(query)
 
       res.send(result)
     })
