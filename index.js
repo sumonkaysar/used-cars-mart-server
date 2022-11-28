@@ -3,6 +3,7 @@ const cors = require("cors")
 const jwt = require("jsonwebtoken")
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb')
 require("dotenv").config()
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
 
 const port = process.env.PORT || 5000
 const app = express()
@@ -10,7 +11,6 @@ const app = express()
 // middle ware
 app.use(cors())
 app.use(express.json())
-
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.zuoxzfe.mongodb.net/?retryWrites=true&w=majority`
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 })
@@ -33,7 +33,7 @@ async function run() {
       const { id } = req.params
       const { email } = req.query
 
-      const carsQuery = { categoryId: id }
+      const carsQuery = { categoryId: id, status: 'Available' }
       const cars = await carsCollection.find(carsQuery).toArray()
 
       const bookingQuery = { buyerEmail: email }
@@ -43,6 +43,24 @@ async function run() {
       const remainingCars = cars.filter(car => !bookedIds.includes(car._id.toString()))
 
       res.send(remainingCars)
+    })
+    
+    app.post('/create-payment-intent', async (req, res) => {
+      const bookedCar = req.body
+      const price = bookedCar.price
+      const amount = price * 1000
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        currency: 'usd',
+        amount: amount,
+        "payment_method_types": [
+          "card"
+        ]
+      })
+
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
     })
 
     app.get('/jwt', async (req, res) => {
@@ -127,6 +145,13 @@ async function run() {
 
     app.post('/users', async (req, res) => {
       const user = req.body
+
+      const query = {email: user.email}
+      const userFromDb = await usersCollection.findOne(query)
+      if (userFromDb) {
+        return res.send({userExists: true})
+      }
+
       const result = await usersCollection.insertOne(user)
 
       res.send(result)
@@ -154,6 +179,14 @@ async function run() {
       res.send(result)
     })
 
+    app.get('/bookCar/:id', async (req, res) => {
+      const {id} = req.params
+      const query = { _id:  ObjectId(id)}
+      const bookedCar = await bookedCarsCollection.findOne(query)
+
+      res.send(bookedCar)
+    })
+
     app.post('/bookCar', async (req, res) => {
       const booking = req.body
       const query = { carId: booking.carId, buyerEmail: booking.buyerEmail }
@@ -167,6 +200,14 @@ async function run() {
       const result = await bookedCarsCollection.insertOne(booking)
 
       res.send(result)
+    })
+
+    app.get('/myOrders', async (req, res) => {
+      const {email} = req.query
+      const query = {buyerEmail: email}
+      const bookedCars = await bookedCarsCollection.find(query).toArray()
+
+      res.send(bookedCars)
     })
   } finally { }
 }
